@@ -33,6 +33,8 @@
 </template>
 
 <script>
+  const lookups = [-1, 0, 1];
+
   export default {
     components: {},
     data() {
@@ -67,11 +69,23 @@
     methods: {
       runEpoch() {
         const changes = [];
-        const lookups = [-1, 0, 1];
-        const lookUpBackRowIndex = this.array.rows - 1;
-        const lookUpBackCellIndex = this.array.cols - 1;
+        const totalRows = this.array.rows;
+        const totalCols = this.array.cols;
+        const lookUpBackRowIndex = totalRows - 1;
+        const lookUpBackCellIndex = totalCols - 1;
 
-        this.array.squares.forEach((row, rowId) => {
+        if (!this.nativeArray) {
+          this.nativeArray = [];
+          this.array.squares.forEach((row, rowId) => {
+            const nativeRow = this.nativeArray[rowId] = [];
+
+            row.forEach((cell, cellId) => {
+              nativeRow[cellId] = { ...cell };
+            });
+          });
+        }
+        const nativeArray = this.nativeArray;
+        nativeArray.forEach((row, rowId) => {
           row.forEach((cell, cellId) => {
             let liveCnt = 0;
             lookups.forEach(rowLookup => {
@@ -81,16 +95,16 @@
                 if (lookupRowId < 0) {
                   lookupRowId = lookUpBackRowIndex;
                 }
-                if (lookupRowId >= this.array.rows) {
+                if (lookupRowId >= totalRows) {
                   lookupRowId = 0;
                 }
                 if (lookupCellId < 0) {
                   lookupCellId = lookUpBackCellIndex;
                 }
-                if (lookupCellId >= this.array.cols) {
+                if (lookupCellId >= totalCols) {
                   lookupCellId = 0;
                 }
-                const otherCell = this.array.squares[lookupRowId][lookupCellId];
+                const otherCell = nativeArray[lookupRowId][lookupCellId];
 
                 if (otherCell != cell && otherCell.l) {
                   liveCnt++;
@@ -108,10 +122,13 @@
             }
           });
         });
+        let liveStatDelta = 0;
         changes.forEach(change => {
-          const r = this.array.squares[change[0]][change[1]].l ^= 1;
-          this.stat.live += r ? 1 : -1;
+          const r = this.array.squares[change[0]][change[1]].l =
+            this.nativeArray[change[0]][change[1]].l ^= 1;
+          liveStatDelta += r ? 1 : -1;
         });
+        this.stat.live += liveStatDelta;
         return changes;
       },
       runLoops() {
@@ -144,7 +161,7 @@
                 this.stat.epoch++;
               }
             }
-            setTimeout(f, 1);
+            setTimeout(f, 0);
           }
         };
         f();
@@ -188,6 +205,7 @@
           });
           this.array.cols = newCols;
         }
+        this.nativeArray = null;
       },
     },
     mounted() {
