@@ -27,6 +27,7 @@
       </div>
       <div>Epoch: {{ stat.epoch }}</div>
       <div>Live: {{ stat.live }}</div>
+      <div>eps: {{ stat.avgEps }}</div>
     </div>
   </div>
 </template>
@@ -44,7 +45,7 @@
         },
         array: {
           squares: [[]],
-          rows: 1,
+          rows: 0,
           cols: 0,
         },
         squaresArray: [],
@@ -57,10 +58,12 @@
         stat: {
           live: 0,
           epoch: 0,
+          frameStat: [],
+          frameStatMaxQty: 5,
+          avgEps: 0,
         },
       };
     },
-    computed: {},
     methods: {
       runEpoch() {
         const changes = [];
@@ -116,7 +119,10 @@
         const f = () => {
           if (this.canWork) {
             if (!this.isMouseDown) {
+              const startedAt = new Date();
               const r = this.runEpoch();
+              this.stat.avgEps = this.getAvgEps(new Date() - startedAt);
+
               const s = r.reduce((acc, v) => acc + `${v[0]}:${v[1]};`, '');
               this.hashLastStates.unshift(s);
               if (this.hashLastStates.length > this.hashLastStates.length) {
@@ -138,10 +144,15 @@
                 this.stat.epoch++;
               }
             }
-            setTimeout(f, 60);
+            setTimeout(f, 1);
           }
         };
         f();
+      },
+      getAvgEps(ellapsedMs) {
+        this.stat.frameStat[this.stat.frameStat.length % this.stat.frameStatMaxQty] = ellapsedMs;
+        const fpsFloat = 1000 / (this.stat.frameStat.reduce((a, b) => a + b, 0) / this.stat.frameStat.length);
+        return parseInt(fpsFloat * 100) / 100;
       },
       mouseDown(rowId, cellId) {
         this.isMouseDown = true;
@@ -181,6 +192,21 @@
     },
     mounted() {
       this.windowResize();
+      const initialState = [
+        [0, 1, 1],
+        [1, 1, 0],
+        [0, 1, 0],
+      ];
+      const fromX = parseInt(this.array.cols / 2) - parseInt(initialState.length / 2);
+      const fromY = parseInt(this.array.rows / 2) - parseInt(initialState[0].length / 2);
+      initialState.forEach((row, rowId) => {
+        row.forEach((cell, cellId) => {
+          if (initialState[rowId][cellId]) {
+            this.mouseDown(fromY + rowId, fromX + cellId);
+          }
+        });
+      });
+      this.mouseUp();
     },
   }
 </script>
