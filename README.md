@@ -6,5 +6,7 @@
 
 `eps` is meaning epoch per second. Greater is best.
 
-vue2: 12.5 eps
-vue3: 1.8 eps
+vue2: 11.2 eps
+vue3: 1.29 eps
+
+vue2/vue3 = 8.68
